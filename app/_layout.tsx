@@ -1,14 +1,18 @@
 import { Feather } from '@expo/vector-icons';
+import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, SplashScreen } from 'expo-router';
 import React, { useEffect } from 'react';
-import { TamaguiProvider, Button, Text } from 'tamagui';
+import { TamaguiProvider, Button, Text, View } from 'tamagui';
 
+import db from '../db';
+import migrations from '../db/drizzle/migrations';
 import config from '../tamagui.config';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function Layout() {
+  const { success, error } = useMigrations(db, migrations);
   const router = useRouter();
 
   const [loaded] = useFonts({
@@ -17,34 +21,30 @@ export default function Layout() {
   });
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded || success) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, success]);
 
-  if (!loaded) return null;
+  if (error) {
+    return (
+      <View>
+        <Text>Migration error: {error.message}</Text>
+      </View>
+    );
+  }
 
-  const BackButton = () => (
-    <Button
-      unstyled
-      flexDirection="row"
-      backgroundColor="transparent"
-      paddingLeft={0}
-      pressStyle={{ opacity: 0.5 }}
-      onPress={router.back}
-      icon={<Feather name="chevron-left" size={16} color="#007AFF" />}>
-      <Text color="#007AFF">Back</Text>
-    </Button>
-  );
+  if (!loaded || !success) return null;
 
   return (
-    <TamaguiProvider config={config}>
-      <Stack>
-        <Stack.Screen name="index" options={{ title: 'Overview' }} />
-        <Stack.Screen
-          name="details"
-          options={{ title: 'Details', headerLeft: () => <BackButton /> }}
-        />
+    <TamaguiProvider config={config} defaultTheme="light">
+      <Stack
+        screenOptions={{
+          headerTitleAlign: 'center',
+          animation: 'slide_from_right',
+          animationDuration: 200,
+        }}>
+        <Stack.Screen name="index" options={{ title: 'Found You' }} />
       </Stack>
     </TamaguiProvider>
   );
